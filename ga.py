@@ -15,19 +15,22 @@ class Population:
         self.individuals = individuals
 
 
-class Genetics():
+class GeneticAlgorithm():
 
-    def __init__(self, nodes, no_individuals, chance_mutacao, chance_cruzamento, intervalo_geracao):
+    def __init__(self, ann_nodes, no_individuals, mutation_chance, crossover_chance, generation_interval):
 
-        self.nodes = nodes
-        self.chance_mutacao = chance_mutacao
-        # O numero de individuos será o demilitados usado para dizer o tamanho de uma população
+        # Set seed for reproducible results
+        np.random.seed(42)
+        
+        self.ann_nodes = ann_nodes
+        self.mutation_chance = mutation_chance
+        # The number of individuals will be used to define the size of a population
         self.no_individuals = no_individuals
-        self.chance_cruzamento = chance_cruzamento
+        self.crossover_chance = crossover_chance
         self.populations = []
         self.create_initial_population()
         self.the_best = None
-        self.intervalo_geracao = intervalo_geracao # Controle a porcentagem da população que será substituída para a próxima geração
+        self.generation_interval = generation_interval # Controls the percentage of population that will be replaced for the next generation
 
     def createIndividual(self, weights = None):
 
@@ -35,7 +38,7 @@ class Genetics():
 
             qtdWeights = 0
 
-            for x, y in zip(self.nodes[:-1], self.nodes[1:]):
+            for x, y in zip(self.ann_nodes[:-1], self.ann_nodes[1:]):
                 qtdWeights = qtdWeights + (x * y)
 
             weights = self.create_random_weight( qtdWeights )                                 
@@ -46,23 +49,23 @@ class Genetics():
 
         individuals = []
 
-        # Qual é a quantidade de indiviudos que a população possui
+        # What is the number of individuals that the population has
         size = self.no_individuals
 
         for i in range(size):
             ind = self.createIndividual()
             individuals.append(ind)
 
-        # Adicionar os individuos criados a população
+        # Add the created individuals to the population
         population = Population(individuals)
 
-        # Setando a populacao criada
+        # Setting the created population
         self.populations.append(population)
 
-    # Gera os pesos iniciais
+    # Generate initial weights
     def create_random_weight(self, qtdWeights):
 
-        # Criar o vetor de pesos que serão usados na rede neural posteriormente
+        # Create the weight vector that will be used in the neural network later
         weights = []
 
         for _ in range(qtdWeights):
@@ -73,7 +76,7 @@ class Genetics():
         
         return np.array(weights)
 
-    # Crossover de um ponto
+    # Single point crossover
     def crossover(self, list_individuals):
 
         newlist_individuals = list_individuals[:]
@@ -83,14 +86,14 @@ class Genetics():
         i = 0
         for x, y in zip(list_individuals[:qtd_cross], list_individuals[qtd_cross:]):
 
-            taxa_random = np.random.rand()
+            random_rate = np.random.rand()
 
-            if taxa_random <= self.chance_cruzamento:
+            if random_rate <= self.crossover_chance:
 
                 j = np.random.randint(0, len(list_individuals[0].weights))
-                newlist_individuals[i].weights = np.append(x.weights[:j], y.weights[j:]) # Concatenando os pesos
+                newlist_individuals[i].weights = np.append(x.weights[:j], y.weights[j:]) # Concatenating weights
                 i = i + 1
-                newlist_individuals[i].weights = np.append(y.weights[:j], x.weights[j:]) # Concatenando os pesos
+                newlist_individuals[i].weights = np.append(y.weights[:j], x.weights[j:]) # Concatenating weights
                 i = i + 1
 
         return newlist_individuals
@@ -101,19 +104,19 @@ class Genetics():
 
         for x in range(len(list_individuals)):
             for i in range(len_weights):
-                taxa_random = np.random.rand()
-                if taxa_random <= self.chance_cruzamento:
+                random_rate = np.random.rand()
+                if random_rate <= self.mutation_chance:
                     list_individuals[x].weights[i] = np.random.rand()
 
         return list_individuals
 
-    # Metodo de seleção por roleta
-    def selecao_roleta(self, list_individuals, num):
+    # Roulette wheel selection method
+    def roulette_selection(self, list_individuals, num):
         """
-            Fonte: https://stackoverflow.com/questions/177271/roulette-selection-in-genetic-algorithms/5315710#5315710
+            Source: https://stackoverflow.com/questions/177271/roulette-selection-in-genetic-algorithms/5315710#5315710
         """
 
-        # Somando todas as notas para dividir posteriormente
+        # Summing all scores to divide later
         total_fitness = 0
         rel_fitness = []
         for x in range(len(list_individuals)):
@@ -122,10 +125,10 @@ class Genetics():
         for x in range(len(list_individuals)):
             rel_fitness.append( list_individuals[x].fitness / total_fitness )
             
-        # Gerando intervalos de probabilidade para cada individuo da população
+        # Generating probability intervals for each individual in the population
         probs = [sum(rel_fitness[:i+1]) for i in range(len(rel_fitness))]
 
-        # Formando o conjunto de individuos selecionados
+        # Forming the set of selected individuals
         new_population = []
         for n in range(int(num)):
             r = np.random.rand()
@@ -136,8 +139,8 @@ class Genetics():
 
         return new_population     
 
-    # Esse metodo cria as proximas populaçoes com base na iteração da primeira população
-    # Onde será feito o processo de selection mutation e crossover
+    # This method creates the next populations based on iteration of the first population
+    # Where the process of selection, mutation and crossover will be done
     def evolution(self):
         
         the_best = []
@@ -145,37 +148,37 @@ class Genetics():
         number_population = (len(self.populations) - 1)
         individuals = self.populations[number_population].individuals
 
-        intervalo = int(self.no_individuals * self.intervalo_geracao)
+        interval = int(self.no_individuals * self.generation_interval)
 
-        # Pegando os melhores individuos da população anterior utilizando o método de roleta
-        the_best = self.selecao_roleta(individuals, intervalo)
+        # Getting the best individuals from the previous population using the roulette method
+        the_best = self.roulette_selection(individuals, interval)
 
-        # Crossover dos melhores individuos da população anterior
+        # Crossover of the best individuals from the previous population
         newIndividuals_cross = self.crossover(the_best)
 
-        # Mutação dos indivíduos após o crossover
+        # Mutation of individuals after crossover
         newIndividuals_cross_mutation = self.mutation(newIndividuals_cross)
 
-        # Individuo Elite
+        # Elite Individual
         newIndividuals.append(self.the_best)
         
-        # Unindo os individuos após o crossover dos individuos da utlima população
+        # Joining individuals after crossover of individuals from the last population
         for i in range(len(newIndividuals_cross_mutation)):
             newIndividuals.append(newIndividuals_cross_mutation[i])
 
-        # Gerando individuos randomicos para completar a população
+        # Generating random individuals to complete the population
         no_individuals = self.no_individuals - len(newIndividuals)
         for i in range(no_individuals):
             newIndividuals.append(self.createIndividual())
 
-        # Gerar nova população
+        # Generate new population
         self.new_population(newIndividuals)
 
-    # the_best será usado para passar os melhores individuos da população passada
+    # the_best will be used to pass the best individuals from the previous population
     def new_population(self, newIndividuals):
 
-        # Adicionar os individuos criados a população
+        # Add the created individuals to the population
         population = Population(newIndividuals)
 
-        # Setando a populacao criada
+        # Setting the created population
         self.populations.append(population)

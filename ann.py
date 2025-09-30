@@ -1,21 +1,22 @@
 from matplotlib import pyplot as plt
-from ga import Genetics
+from ga import GeneticAlgorithm
 
 import numpy as np
 
 # @author Carlos Henrique Kayser
-# Rede Neural Estatica
-# Material de apoio usado https://www.python-course.eu/neural_networks_with_python_numpy.php
+# Static Neural Network
+# Supporting material used https://www.python-course.eu/neural_networks_with_python_numpy.php
 
 class NeuralNetwork:
 
-    def __init__(self, nodes, env, genetics = None ):
+    def __init__(self, nodes, env, genetics = None, model_prefix = "model"):
 
         self.layers = len(nodes)
         self.nodes = nodes
         self.env = env
+        self.model_prefix = model_prefix
         if genetics is None:
-            self.genetics = Genetics(self.nodes, 15, 0.5, 0.5) # genetic default case is not passed
+            self.genetics = GeneticAlgorithm(self.nodes, 15, 0.5, 0.5, generation_interval=0.5) # genetic default case is not passed
         else:
             self.genetics = genetics
 
@@ -25,29 +26,54 @@ class NeuralNetwork:
 
         for layer in weights_matrices:
 
-            output = self.reLu(np.dot(input_vector, layer) + [bias])
+            output = self.reLu(np.dot(input_vector, layer) + bias)
             input_vector = output
 
-        # CartPole
-        if output > 0.50:
-            output = 1
-        else:
-            output = 0
+        # Determine action based on environment type
+        env_id = self.env.spec.id if hasattr(self.env, 'spec') else str(self.env)
+        
+        if 'CartPole' in env_id:
+            # CartPole: binary decision (left/right)
+            if output > 0.50:
+                action = 1
+            else:
+                action = 0
 
-        return output
+        elif 'MountainCar' in env_id:
+            # MountainCar: 3 discrete actions (left, no action, right)
+            if len(output) == 3:
+                # If network outputs 3 values, use argmax
+                action = np.argmax(output)
+            else:
+                # If network outputs 1 value, map to 3 actions
+                if output < -0.33:
+                    action = 0  # Push left
+                elif output > 0.33:
+                    action = 2  # Push right
+                else:
+                    action = 1  # No push
+
+        else:
+            # Default behavior for unknown environments
+            if hasattr(output, '__len__') and len(output) > 1:
+                action = np.argmax(output)
+            else:
+                action = 1 if output > 0.5 else 0
+
+        return action
     
     # Use reLu
     def reLu(self, x):
-	    return np.maximum(0,x)
+        return np.maximum(0,x)
 
-    # Função de Ativação Sigmóide
+    # Sigmoid Activation Function
     def sigmoid(self, z):
         return 1/(1+np.exp(-z))
 
     def softmax(self, x):
         return np.exp(x)/np.sum(np.exp(x))
     
-    # Funcao prepara os pesos para executarmos na rede
+    # Function prepares the weights to execute in the network
     def prepareWeights(self, weights):
 
         weights_matrices = []
@@ -60,18 +86,20 @@ class NeuralNetwork:
             weights_matrices.append(np.reshape(weights[last_index:matrix_size], (x, y)))
             last_index = matrix_size
 
-        # pegando o bias
+        # getting the bias
         bias = weights[last_index:]
 
         return weights_matrices, bias[0]
 
-    def train(self):
+    def train(self, max_generations=100):
 
         learned_generations = []
         historic_score = []
         n_episodes = 0
+        generation_count = 0
+        episode_seed = 42  # Base seed for reproducibility
 
-        while(True):        
+        while generation_count < max_generations:
             number_generation = (len(self.genetics.populations) - 1)
             generations = self.genetics.populations
             populations = generations[number_generation]
@@ -79,76 +107,77 @@ class NeuralNetwork:
 
             score_individuals = []
             
-            for ind in individuals:
+            for ind_idx, ind in enumerate(individuals):
 
-                obs = self.env.reset()
-                award = 0
+                obs, _ = self.env.reset(seed=episode_seed + n_episodes)
+                total_reward = 0
                 while True:
-                    self.env.render()
                     action = self.feedforward(obs, ind.weights)
-                    obs, reward, done, info = self.env.step(action)
-                    award += reward
-                    if done:
+                    obs, reward, done, truncated, info = self.env.step(action)
+                    total_reward += reward
+                    if done or truncated:
                         n_episodes = n_episodes + 1
                         break
 
-                ind.fitness = award
-                score_individuals.append(award)
+                ind.fitness = total_reward
+                score_individuals.append(total_reward)
 
-                # Receberá o primeiro individuo
+                # Save the latest model after each generation
+                current_generation = len(self.genetics.populations) - 1
+                latest_individual = individuals[np.argmax([ind.fitness for ind in individuals])]
+                np.save(f"checkpoints/{self.model_prefix}_latest", latest_individual.weights)
+
+                # Receive the first individual
                 if self.genetics.the_best is None:
                     self.genetics.the_best = ind
-                    np.save("the_best", ind.weights)                
+                    np.save(f"checkpoints/{self.model_prefix}_best", ind.weights)
+
                 if self.genetics.the_best.fitness < ind.fitness:
                     self.genetics.the_best = ind
-                    np.save("the_best", ind.weights)
+                    np.save(f"checkpoints/{self.model_prefix}_best", ind.weights)
 
-            print("Population: ", len(self.genetics.populations) - 1, " Score: ", np.amax(score_individuals), "Episodes: ", n_episodes)
+            print("Generation: ", generation_count, " Score: ", np.amax(score_individuals), "Episodes: ", n_episodes)
 
             learned_generations = np.append(learned_generations, np.amax(score_individuals))
 
             historic_score.append(np.amax(score_individuals))
-            if self.stop_function(historic_score):
-                break
 
-            # Vem depois pois no momento da criação da rede o code ja cria a primeira população
+            # Comes after because at the moment of network creation the code already creates the first population
             self.genetics.evolution()
+            generation_count += 1
 
-        # Apresentar curva de aprendizado
-        plt.plot(learned_generations)
-        plt.xlabel('Numero de populações')
-        plt.ylabel('Pontuação')
-        plt.title('Numero de populações vs Pontuação')
-        plt.grid()
-        plt.show()
+        # Save final models (overwrite with final versions)
+        np.save(f"checkpoints/{self.model_prefix}_best", self.genetics.the_best.weights)
+        np.save(f"checkpoints/{self.model_prefix}_latest", self.genetics.the_best.weights)
+        
+        # Generate learning curve plot
+        env_name = self.env.spec.id if hasattr(self.env, 'spec') else str(self.env)
+        plot_filename = self.plot_learning_curve(learned_generations, env_name, self.model_prefix)
+        
+        print(f"Models saved:")
+        print(f"- Best model: checkpoints/{self.model_prefix}_best.npy")
+        print(f"- Latest model: checkpoints/{self.model_prefix}_latest.npy")
+        print(f"- Learning curve: {plot_filename}")
 
         return self.genetics.the_best, historic_score, n_episodes
 
-    def stop_function(self, historic_score):
+    def plot_learning_curve(self, learned_generations, env_name, model_prefix):
+        """Generate and save learning curve plot with environment and algorithm info"""
+        plt.figure(figsize=(10, 6))
+        plt.plot(learned_generations, linewidth=2, color='blue')
+        plt.title(f'Learning Curve - Genetic Algorithm on {env_name}', fontsize=14, fontweight='bold')
+        plt.xlabel('Generation', fontsize=12)
+        plt.ylabel('Best Fitness Score', fontsize=12)
+        plt.grid(True, alpha=0.3)
+        
+        # Add algorithm and environment info as text
+        plt.text(0.02, 0.98, f'Algorithm: Genetic Algorithm\nEnvironment: {env_name}\nGenerations: {len(learned_generations)}', 
+                transform=plt.gca().transAxes, verticalalignment='top', 
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 
-        # Caso o score fique estagnado então interrompe o treinamento
-        if len(historic_score) >= 5:
-            for i in range(len(historic_score)):
-                if historic_score[i] == historic_score[i-1] and historic_score[i-1] == historic_score[i-2] and historic_score[i-2] == historic_score[i-3] and historic_score[i-3] == historic_score[i-4]:
-                    print("Stop Function")
-                    return True
+        # Save the plot
+        plot_filename = f"checkpoints/{model_prefix}_{env_name.split('-')[0].lower()}_learning_curve.png"
+        plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+        plt.close()  # Close the figure to free memory
 
-    def test(self, the_best):
-
-        sucess = False
-        obs = self.env.reset()
-        award = 0
-        while True:
-            self.env.render()
-            action = self.feedforward(obs, the_best.weights)
-            obs, reward, done, info = self.env.step(action)
-            award += reward
-            print('award', award)
-            if done:
-                if award == 200.0:
-                    sucess = True
-                    return sucess
-                elif award == 500.0:
-                    sucess = True
-                    return sucess
-                break
+        return plot_filename
