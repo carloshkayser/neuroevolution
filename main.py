@@ -1,10 +1,9 @@
-from ann import NeuralNetwork
-from ga import GeneticAlgorithm
+from ann import PyTorchGeneticTrainer, CartPoleNet
 
 import gymnasium as gym
 import numpy as np
-import os
 import argparse
+import os
 
 # Function to load a saved model
 def load_model(model_path):
@@ -18,12 +17,27 @@ def load_model(model_path):
 # Agent wrapper class for evaluation
 class NeuralNetworkAgent:
     def __init__(self, network, weights):
+        # network can be a PyTorch CartPoleNet (with get_action),
+        # a legacy network with feedforward(network, weights), or a callable.
         self.network = network
         self.weights = weights
+        self.env_type = 'CartPole'
     
     def predict(self, obs):
         """Predict action using the neural network"""
-        return self.network.feedforward(obs, self.weights)
+        # If the network exposes get_action (PyTorch implementation)
+        if hasattr(self.network, 'get_action'):
+            return self.network.get_action(obs, self.env_type)
+
+        # Legacy API: network.feedforward(obs, weights)
+        if hasattr(self.network, 'feedforward'):
+            return self.network.feedforward(obs, self.weights)
+
+        # If network is a callable
+        if callable(self.network):
+            return self.network(obs)
+
+        raise ValueError('Unsupported network type for prediction')
 
 def evaluate(agent, env, n_episodes=20, render=False):
     """Evaluate the agent performance over multiple episodes"""
@@ -38,7 +52,15 @@ def evaluate(agent, env, n_episodes=20, render=False):
             if render:
                 env.render()
 
-            action = agent.predict(obs)  # use trained model
+            # Agent may be a NeuralNetworkAgent (with predict) or a PyTorch network
+            if hasattr(agent, 'predict'):
+                action = agent.predict(obs)
+            elif hasattr(agent, 'get_action'):
+                # Default to CartPole env type for get_action
+                action = agent.get_action(obs)
+            else:
+                # Fallback: assume callable
+                action = agent(obs)
             obs, reward, done, truncated, info = env.step(action)
             total_reward += reward
         
@@ -57,20 +79,24 @@ def main():
     parser = argparse.ArgumentParser(description='Neural Network with Genetic Algorithm for Gym Environments')
     parser.add_argument('--train', action='store_true', help='Train the neural network')
     parser.add_argument('--test', action='store_true', help='Test/evaluate the trained agent')
-    parser.add_argument('--env', choices=['CartPole', 'MountainCar'], default='CartPole', 
-                       help='Environment to use: CartPole (CartPole-v1) or MountainCar (MountainCar-v0)')
+    # parser.add_argument('--env', choices=['CartPole', 'MountainCar'], default='CartPole', 
+    #                    help='Environment to use: CartPole (CartPole-v1) or MountainCar (MountainCar-v0)')
+    parser.add_argument('--env', choices=['CartPole'], default='CartPole', 
+                       help='Environment to use: CartPole (CartPole-v1)')
     parser.add_argument('--generations', type=int, default=100, 
                        help='Maximum number of generations for training (default: 100)')
     
     # Genetic Algorithm parameters
     parser.add_argument('--population', type=int, default=50, 
                        help='Population size (number of individuals) (default: 50)')
-    parser.add_argument('--mutation-rate', type=float, default=0.01, 
-                       help='Mutation chance/rate (default: 0.01)')
-    parser.add_argument('--crossover-rate', type=float, default=0.01, 
-                       help='Crossover chance/rate (default: 0.01)')
+    parser.add_argument('--mutation-prob', type=float, default=0.01, 
+                       help='Mutation probability (default: 0.01)')
+    parser.add_argument('--crossover-prob', type=float, default=0.01, 
+                       help='Crossover probability (default: 0.01)')
     parser.add_argument('--generation-interval', type=float, default=0.50, 
                        help='Generation replacement ratio (default: 0.50)')
+    parser.add_argument('--render', action='store_true', 
+                       help='Render the environment during testing')
     
     args = parser.parse_args()
     
@@ -117,21 +143,29 @@ def main():
         print("=== TRAINING MODE ===")
         print(f"Maximum generations: {args.generations}")
         print(f"Population size: {args.population}")
-        print(f"Mutation rate: {args.mutation_rate}")
-        print(f"Crossover rate: {args.crossover_rate}")
+        print(f"Mutation rate: {args.mutation_prob}")
+        print(f"Crossover rate: {args.crossover_prob}")
         print(f"Generation interval: {args.generation_interval}")
         
-        genetic = GeneticAlgorithm(size_of_network, args.population, args.mutation_rate, 
-                                 args.crossover_rate, generation_interval=args.generation_interval)
-        network = NeuralNetwork(size_of_network, env = env, genetics = genetic, model_prefix = model_prefix)
+        # Map size_of_network ([input, hidden..., output]) to hidden layers
+        hidden_layers = size_of_network[1:-1]
 
-        the_best, _, n_episodes = network.train(max_generations=args.generations)
+        # Create PyTorch-based trainer and run training
+        trainer = PyTorchGeneticTrainer(env_name, hidden_layers, model_prefix=model_prefix)
 
-        print(f"Training completed after {args.generations} generations and {n_episodes} episodes.")
-        
+        best_network, best_fitness, n_generations = trainer.train(
+            n_generations=args.generations,
+            population_size=args.population,
+            crossover_prob=args.crossover_prob,
+            mutation_prob=args.mutation_prob
+        )
+
+        print(f"Training completed after {n_generations} generations. Best fitness: {best_fitness:.2f}")
+
         # Use evaluate function to test the trained agent
         print("\n=== EVALUATING TRAINED AGENT ===")
-        agent = NeuralNetworkAgent(network, the_best.weights)
+        # trainer.best_network is a CartPoleNet with get_action()
+        agent = trainer.best_network
         
         # Create evaluation environment (no rendering)
         eval_env = gym.make(env_name)
@@ -153,31 +187,43 @@ def main():
 
     if args.test:
         print("=== TESTING MODE ===")
-        
-        # Load the best saved model
-        model_file = f'checkpoints/{model_prefix}_best.npy'
-        saved_weights = load_model(model_file)
-        if saved_weights is None:
-            print(f"No saved model found at {model_file}! Please train first with --train --env {args.env}")
-            return
-        
-        # Create network for evaluation (needs env parameter)
-        network = NeuralNetwork(size_of_network, env=env, model_prefix=model_prefix)
-        agent = NeuralNetworkAgent(network, saved_weights)
-        
-        # First evaluate without rendering to get statistics
-        print(f"Evaluating trained {args.env} agent (10 episodes, no rendering)...")
-        eval_env = gym.make(env_name)
-        avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10, render=False)
-        eval_env.close()
-        
-        # Then run with rendering for visual confirmation
-        print(f"\nRunning 5 episodes with visual rendering:")
-        render_env = gym.make(env_name, render_mode='human')
-        evaluate(agent, render_env, n_episodes=5, render=True)
-        render_env.close()
 
-    env.close()
+        eval_env = gym.make(env_name, render_mode='human' if args.render else None)
+
+        # Load the saved PyTorch model using the trainer and evaluate
+        hidden_layers = size_of_network[1:-1]
+        trainer = PyTorchGeneticTrainer(env_name, hidden_layers, model_prefix=model_prefix)
+
+        # Load PyTorch checkpoint (saved by PyTorchGeneticTrainer.save_model)
+        model_path = f'checkpoints/{model_prefix}_best.pth'
+        if os.path.exists(model_path):
+            trainer.load_model(model_path)
+            agent = trainer.best_network
+
+            # First evaluate without rendering to get statistics
+            print(f"Evaluating trained {args.env} agent (10 episodes)...")
+            avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10)
+
+        else:
+            # Fall back to numpy weights file if PyTorch checkpoint not present
+            weights_file = f'checkpoints/{model_prefix}_weights.npy'
+            if os.path.exists(weights_file):
+                saved_weights = load_model(weights_file)
+
+                # Create a small CartPoleNet instance and set weights
+                net = CartPoleNet(number_of_inputs, hidden_layers, size_of_network[-1])
+                net.set_weights_from_vector(saved_weights)
+                agent = net
+
+                print(f"Evaluating trained {args.env} agent (10 episodes)...")
+                avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10)
+
+            else:
+                print(f"No saved model found at {model_path} or {weights_file}! Please train first with --train --env {args.env}")
+                return
+
+        eval_env.close()
+
 
 if __name__ == "__main__":
     main()
