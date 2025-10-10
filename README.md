@@ -59,3 +59,8 @@ python main.py --env CartPole --train --generations 100 --population 50 --crosso
 # Test the trained CartPole model with rendering
 python main.py --env CartPole --test --render
 ```
+
+<p align="center">
+  <img width="668" height="496" alt="CartPole problem" src="https://github.com/user-attachments/assets/e742b477-15d5-428d-94b9-6c7b2a2d28c3" />
+</p>
+
