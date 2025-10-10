@@ -16,12 +16,28 @@ def load_model(model_path):
 
 # Agent wrapper class for evaluation
 class NeuralNetworkAgent:
+    def __init__(self, network, weights, env_type='CartPole'):
+        # network can be a PyTorch CartPoleNet (with get_action),
+        # a legacy network with feedforward(network, weights), or a callable.
+        self.network = network
+        self.weights = weights
+        self.env_type = env_type
+def load_model(model_path):
+    """Load a saved model from numpy file"""
+    if os.path.exists(model_path):
+        return np.load(model_path)
+    else:
+        print(f"Model file {model_path} not found!")
+        return None
+
+# Agent wrapper class for evaluation
+class NeuralNetworkAgent:
     def __init__(self, network, weights):
         # network can be a PyTorch CartPoleNet (with get_action),
         # a legacy network with feedforward(network, weights), or a callable.
         self.network = network
         self.weights = weights
-        self.env_type = 'CartPole'
+        self.env_type = env_type
     
     def predict(self, obs):
         """Predict action using the neural network"""
@@ -39,7 +55,7 @@ class NeuralNetworkAgent:
 
         raise ValueError('Unsupported network type for prediction')
 
-def evaluate(agent, env, n_episodes=20, render=False):
+def evaluate(agent, env, n_episodes=20, render=False, env_type='CartPole'):
     """Evaluate the agent performance over multiple episodes"""
     rewards = []
     
@@ -57,7 +73,7 @@ def evaluate(agent, env, n_episodes=20, render=False):
                 action = agent.predict(obs)
             elif hasattr(agent, 'get_action'):
                 # Default to CartPole env type for get_action
-                action = agent.get_action(obs)
+                action = agent.get_action(obs, env_type)
             else:
                 # Fallback: assume callable
                 action = agent(obs)
@@ -81,8 +97,8 @@ def main():
     parser.add_argument('--test', action='store_true', help='Test/evaluate the trained agent')
     # parser.add_argument('--env', choices=['CartPole', 'MountainCar'], default='CartPole', 
     #                    help='Environment to use: CartPole (CartPole-v1) or MountainCar (MountainCar-v0)')
-    parser.add_argument('--env', choices=['CartPole'], default='CartPole', 
-                       help='Environment to use: CartPole (CartPole-v1)')
+    parser.add_argument('--env', choices=['CartPole', 'LunarLander'], default='CartPole', 
+                       help='Environment to use: CartPole (CartPole-v1) or LunarLander (LunarLander-v2)')
     parser.add_argument('--generations', type=int, default=100, 
                        help='Maximum number of generations for training (default: 100)')
     
@@ -110,11 +126,11 @@ def main():
         model_prefix = 'cartpole'
         max_steps = 500
         success_threshold = 475  # Consider success if >= 475 steps for CartPole
-    elif args.env == 'MountainCar':
-        env_name = 'MountainCar-v0'
-        model_prefix = 'mountaincar'
-        max_steps = 200
-        success_threshold = -110  # MountainCar has negative rewards, success is reaching the goal
+    elif args.env == 'LunarLander':
+        env_name = 'LunarLander-v3'
+        model_prefix = 'lunarlander'
+        max_steps = 1000
+        success_threshold = 200  # LunarLander success is typically 200+ reward
     
     print(f"Using environment: {env_name}")
     
@@ -135,9 +151,9 @@ def main():
         number_of_actions = env.action_space.n  # Discrete actions for CartPole
         size_of_network = [number_of_inputs, 4, 3, 1]  # Output 1 node for binary decision
 
-    elif args.env == 'MountainCar':
-        number_of_actions = env.action_space.n  # Discrete actions for MountainCar
-        size_of_network = [number_of_inputs, 8, 6, number_of_actions]  # Output 3 nodes for 3 actions
+    elif args.env == 'LunarLander':
+        number_of_actions = env.action_space.n  # 4 discrete actions for LunarLander
+        size_of_network = [number_of_inputs, 16, 12, number_of_actions]  # Output 4 nodes for 4 actions
 
     if args.train:
         print("=== TRAINING MODE ===")
@@ -170,12 +186,12 @@ def main():
         # Create evaluation environment (no rendering)
         eval_env = gym.make(env_name)
         print("Testing trained agent without rendering:")
-        avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10, render=False)
+        avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10, render=False, env_type=args.env)
         
         # Determine success based on average performance
         if args.env == 'CartPole':
             success = avg_reward >= success_threshold
-        elif args.env == 'MountainCar':
+        elif args.env == 'LunarLander':
             success = avg_reward >= success_threshold
             
         if success:
@@ -202,7 +218,7 @@ def main():
 
             # First evaluate without rendering to get statistics
             print(f"Evaluating trained {args.env} agent (10 episodes)...")
-            avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10)
+            avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10, env_type=args.env)
 
         else:
             # Fall back to numpy weights file if PyTorch checkpoint not present
@@ -216,7 +232,7 @@ def main():
                 agent = net
 
                 print(f"Evaluating trained {args.env} agent (10 episodes)...")
-                avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10)
+                avg_reward, std_reward = evaluate(agent, eval_env, n_episodes=10, env_type=args.env)
 
             else:
                 print(f"No saved model found at {model_path} or {weights_file}! Please train first with --train --env {args.env}")

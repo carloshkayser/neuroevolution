@@ -1,6 +1,6 @@
 # Neuroevolution: Evolving Neural Network with Genetic Algorithms
 
-A Python implementation of an Artificial Neural Network (ANN) trained using a Genetic Algorithm (GA) to solve CartPole from OpenAI Gymnasium environments.
+A Python implementation of an Artificial Neural Network (ANN) trained using a Genetic Algorithm (GA) to solve OpenAI Gymnasium environments including CartPole and LunarLander.
 
 ## Overview
 
@@ -21,6 +21,9 @@ python main.py --train --generations 100 --population 50 --crossover-prob 0.9 --
 
 # CartPole environment
 python main.py --train --env CartPole --hidden-layers 128 64 32
+
+# LunarLander environment
+python main.py --train --env LunarLander --hidden-layers 128 64 32
 ```
 
 ### Testing
@@ -71,3 +74,17 @@ python main.py --env CartPole --test --render
 <p align="center">
   <img width="668" height="496" alt="CartPole problem" src="https://github.com/user-attachments/assets/e742b477-15d5-428d-94b9-6c7b2a2d28c3" />
 </p>
+
+## Solving LunarLander
+
+Training LunarLander with custom parameters
+```bash
+python main.py --env LunarLander --train --generations 200 --population 100 --crossover-prob 0.9 --mutation-prob 0.05
+```
+
+LunarLander is a more complex continuous control task requiring the agent to land a spacecraft safely. The environment has 8 state variables and 4 discrete actions.
+
+After training, test the agent:
+```bash
+python main.py --env LunarLander --test --render
+```

@@ -66,6 +66,9 @@ class CartPoleNet(nn.Module):
                         action = 2  # Push right
                     else:
                         action = 1  # No push
+            elif env_type == 'LunarLander':
+                # Four actions: do nothing (0), fire left (1), fire main (2), fire right (3)
+                action = torch.argmax(output, dim=1).item()
             else:
                 # Default behavior
                 if self.output_size > 1:
@@ -113,6 +116,9 @@ class GymOptimizationProblem(Problem):
         elif 'MountainCar' in env_name:
             output_size = 3
             self.env_type = 'MountainCar'
+        elif 'LunarLander' in env_name:
+            output_size = 4
+            self.env_type = 'LunarLander'
         else:
             output_size = self.env.action_space.n
             self.env_type = 'Unknown'
@@ -177,12 +183,21 @@ class PyTorchGeneticTrainer:
         elif 'MountainCar' in env_name:
             self.env_type = 'MountainCar'
             self.success_threshold = -110
+        elif 'LunarLander' in env_name:
+            self.env_type = 'LunarLander'
+            self.success_threshold = 200
         else:
             self.env_type = 'Unknown'
             self.success_threshold = 0
             
         # Create the optimization problem
-        self.problem = GymOptimizationProblem(env_name, network_architecture)
+        if 'CartPole' in env_name:
+            max_steps = 500
+        elif 'LunarLander' in env_name:
+            max_steps = 1000
+        else:
+            max_steps = 500
+        self.problem = GymOptimizationProblem(env_name, network_architecture, max_steps_per_eval=max_steps)
         
         # Store best network
         self.best_network = None
