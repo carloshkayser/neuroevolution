@@ -52,15 +52,22 @@ python main.py --train --hidden-layers 256 128 64 32 16 8
 
 ## Solving CartPole
 
+Training CartPole with custom parameters
 ```bash
-# Training CartPole with custom parameters
 python main.py --env CartPole --train --generations 100 --population 50 --crossover-prob 0.9 --mutation-prob 0.1
+```
 
-# Test the trained CartPole model with rendering
+After training, the best model is saved as `best_model_CartPole.pth` with the learning curve saved as `learning_curve_CartPole.png`.
+
+<p align="center">
+  <img width="668" height="496" alt="CartPole problem" src="checkpoints/cartpole_learning_curve.png" />
+</p>
+
+Now you can test and visualize the trained agent using:
+```bash
 python main.py --env CartPole --test --render
 ```
 
 <p align="center">
   <img width="668" height="496" alt="CartPole problem" src="https://github.com/user-attachments/assets/e742b477-15d5-428d-94b9-6c7b2a2d28c3" />
 </p>
-
