@@ -1,90 +1,126 @@
-# Neuroevolution: Evolving Neural Network with Genetic Algorithms
+# Neuroevolution: Evolving Neural Networks with Genetic Algorithms
 
-A Python implementation of an Artificial Neural Network (ANN) trained using a Genetic Algorithm (GA) to solve OpenAI Gymnasium environments including CartPole and LunarLander.
+A modular Python package implementing Artificial Neural Networks (ANN) trained using Genetic Algorithms (GA via PyMOO) to solve OpenAI Gymnasium environments including **CartPole**, **MountainCar**, and **Maze** (`HardMaze`).
 
 ## Overview
 
-This project demonstrates the application of neuroevolution, combining artificial neural networks with genetic algorithms to learn optimal control policies. The implementation uses a genetic algorithm to evolve the weights of a neural network that controls various Gym environment agents, eliminating the need for traditional backpropagation-based training.
+This project demonstrates the application of neuroevolution, combining PyTorch neural networks with genetic algorithms to evolve optimal control policies without traditional backpropagation.
 
-## Usage Examples
+## Supported Environments
 
-### Training
+| Environment | Gym ID | Observation Space | Action Space | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **CartPole** | `CartPole-v1` | `Box(4)` | `Discrete(2)` | Balance a pole on a moving cart |
+| **MountainCar** | `MountainCar-v0` | `Box(2)` | `Discrete(3)` | Drive a car up a steep hill |
+| **Maze** | `HardMaze-v0` | `Box(9)` | `Box(3)` | Navigate a robot through a complex maze |
+
+## Demos
+
+| **CartPole** (`CartPole-v1`) | **MountainCar** (`MountainCar-v0`) | **Maze** (`HardMaze-v0`) |
+| :---: | :---: | :---: |
+| ![CartPole Demo](assets/cartpole.gif) | ![MountainCar Demo](assets/mountaincar.gif) | ![Maze Demo](assets/maze.gif) |
+| *Pole balancing control* | *Momentum building & hill climb* | *Complex maze navigation* |
+
+---
+
+## Installation
+
+### Using Poetry (Recommended)
+
 ```bash
-# Basic training
-python main.py --train
+# Clone the repository
+git clone https://github.com/carloshkayser/neuroevolution.git
+cd neuroevolution
 
-# Custom architecture
-python main.py --train --hidden-layers 64 32 16
-
-# Advanced parameters
-python main.py --train --generations 100 --population 50 --crossover-prob 0.9 --mutation-prob 0.1
-
-# CartPole environment
-python main.py --train --env CartPole --hidden-layers 128 64 32
-
-# LunarLander environment
-python main.py --train --env LunarLander --hidden-layers 128 64 32
+# Install dependencies and package
+poetry install
 ```
 
-### Testing
-```bash
-# Evaluate trained model
-python main.py --test
+### Using pip / virtualenv
 
-# Evaluate with rendering
-python main.py --test --render
+```bash
+# Install in editable mode
+pip install -e .
 ```
 
-## Architecture Flexibility
+---
 
-The implementation allows easy architecture customization:
+## Usage
 
+### 1. Command Line Interface (CLI)
+
+Once installed, you can use the `neuroevolution` command (or `python -m neuroevolution` / `python main.py`):
+
+#### Training
 ```bash
-# Small network
-python main.py --train --hidden-layers 16 8
+# Train on CartPole (default)
+neuroevolution --train --env CartPole
 
-# Medium network (default)
-python main.py --train --hidden-layers 64 32
+# Train on MountainCar
+neuroevolution --train --env MountainCar --generations 100 --population 50
 
-# Large network
-python main.py --train --hidden-layers 128 64 32 16
+# Train on Maze (HardMaze navigation)
+neuroevolution --train --env Maze --generations 150 --population 60
 
-# Deep network
-python main.py --train --hidden-layers 256 128 64 32 16 8
+# Custom network architecture
+neuroevolution --train --env CartPole --hidden-layers 64 32 16
+
+# Advanced GA hyperparameters
+neuroevolution --train --generations 100 --population 50 --crossover-prob 0.9 --mutation-prob 0.1
 ```
 
-## Solving CartPole
-
-Training CartPole with custom parameters
+#### Testing / Evaluation
 ```bash
-python main.py --env CartPole --train --generations 100 --population 50 --crossover-prob 0.9 --mutation-prob 0.1
+# Evaluate trained CartPole model
+neuroevolution --test --env CartPole
+
+# Evaluate trained MountainCar model
+neuroevolution --test --env MountainCar --render
+
+# Evaluate trained Maze model
+neuroevolution --test --env Maze
 ```
 
-After training, the best model is saved as `best_model_CartPole.pth` with the learning curve saved as `learning_curve_CartPole.png`.
-
-<p align="center">
-  <img width="668" height="496" alt="CartPole problem" src="checkpoints/cartpole_learning_curve.png" />
-</p>
-
-Now you can test and visualize the trained agent using:
+#### Recording Demos (GIFs)
 ```bash
-python main.py --env CartPole --test --render
+# Record GIF for trained CartPole model
+neuroevolution --record-gif --env CartPole
+
+# Record GIF for trained MountainCar model
+neuroevolution --record-gif --env MountainCar
+
+# Record GIF for trained Maze model
+neuroevolution --record-gif --env Maze
 ```
 
-<p align="center">
-  <img width="668" height="496" alt="CartPole problem" src="https://github.com/user-attachments/assets/e742b477-15d5-428d-94b9-6c7b2a2d28c3" />
-</p>
+---
 
-## Solving LunarLander
+### 2. Python API
 
-Training LunarLander with custom parameters
-```bash
-python main.py --env LunarLander --train --generations 200 --population 100 --crossover-prob 0.9 --mutation-prob 0.05
-```
+You can import and use `neuroevolution` directly in your Python code:
 
-LunarLander is a more complex continuous control task requiring the agent to land a spacecraft safely. The environment has 8 state variables and 4 discrete actions.
+```python
+from neuroevolution import PyTorchGeneticTrainer, CartPoleNet
 
-After training, test the agent:
-```bash
-python main.py --env LunarLander --test --render
+# 1. Create a trainer for MountainCar
+trainer = PyTorchGeneticTrainer(
+    env_name="MountainCar-v0",
+    network_architecture=[16, 8],
+    model_prefix="mountaincar_ga"
+)
+
+# 2. Train with Genetic Algorithm
+best_network, best_fitness, generations = trainer.train(
+    n_generations=50,
+    population_size=40,
+    crossover_prob=0.9,
+    mutation_prob=0.1
+)
+
+# 3. Evaluate the trained policy
+avg_reward, std_reward = trainer.evaluate(n_episodes=10, render=False)
+print(f"Average Reward: {avg_reward:.2f} +/- {std_reward:.2f}")
+
+# 4. Record an animated GIF of the agent
+trainer.record_gif(output_path="assets/mountaincar_demo.gif", fps=30)
 ```

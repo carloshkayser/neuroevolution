@@ -1,9 +1,9 @@
 [project]
-name = "ann-ga-cart-pole"
+name = "neuroevolution"
 version = "0.1.0"
-description = ""
+description = "Evolving Neural Networks with Genetic Algorithms in Gymnasium environments"
 authors = [
-    {name = "Carlos Kayser",email = "carloshkayser@gmail.com"}
+    {name = "Carlos Kayser", email = "carloshkayser@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
@@ -12,9 +12,13 @@ dependencies = [
     "matplotlib (>=3.10.6,<4.0.0)",
     "gymnasium[box2d] (>=1.2.1,<2.0.0)",
     "torch (>=2.8.0,<3.0.0)",
-    "pymoo (>=0.6.1.5,<0.7.0.0)"
+    "pymoo (>=0.6.1.5,<0.7.0.0)",
+    "minigrid (>=3.1.0,<4.0.0)",
+    "gymnasium-hardmaze (>=0.1.1,<0.2.0)"
 ]
 
+[project.scripts]
+neuroevolution = "neuroevolution.cli:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
