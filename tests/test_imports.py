@@ -17,6 +17,9 @@ class TestImports(unittest.TestCase):
         self.assertTrue(hasattr(ne, "load_model"))
         self.assertTrue(hasattr(ne, "make_env"))
         self.assertTrue(hasattr(ne, "CarRacingObsWrapper"))
+        self.assertTrue(hasattr(ne, "TrainingJob"))
+        self.assertTrue(hasattr(ne, "create_job"))
+        self.assertTrue(hasattr(ne, "list_jobs"))
 
     def test_submodule_exports(self):
         from neuroevolution.models import CartPoleNet, FeedForwardNet, NeuralNetwork
@@ -28,6 +31,7 @@ class TestImports(unittest.TestCase):
             make_env,
         )
         from neuroevolution.agent import NeuralNetworkAgent, evaluate, load_model
+        from neuroevolution.tracker import TrainingJob, create_job, list_jobs
         from neuroevolution.cli import parse_args, main
 
         self.assertIsNotNone(CartPoleNet)
@@ -41,6 +45,9 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(evaluate)
         self.assertIsNotNone(load_model)
         self.assertIsNotNone(make_env)
+        self.assertIsNotNone(TrainingJob)
+        self.assertIsNotNone(create_job)
+        self.assertIsNotNone(list_jobs)
         self.assertIsNotNone(parse_args)
         self.assertIsNotNone(main)
 

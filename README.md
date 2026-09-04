@@ -111,6 +111,23 @@ neuroevolution --record-gif --env Maze
 neuroevolution --record-gif --env CarRacing --gif-path assets/carracing.gif
 ```
 
+#### Experiment & Job History Tracking
+Each training session is automatically saved in an isolated directory `jobs/train-{env}-{uuid}/` containing:
+- `config.json`: Run parameters (population, generations, crossover/mutation rates, workers).
+- `metrics.json`: Final fitness, evaluation reward, duration, and status.
+- `train.log`: Training progress and timestamps.
+- Model checkpoints, weights array (`.npy`), and learning curve (`.png`).
+
+When training completes, the best artifacts are automatically promoted to `checkpoints/` and `assets/`.
+
+```bash
+# List all past training runs, hyperparameters, and results
+neuroevolution --list-jobs
+
+# Disable job directory creation (save directly to checkpoints/)
+neuroevolution --train --env CartPole --no-job
+```
+
 ---
 
 ### 2. Python API

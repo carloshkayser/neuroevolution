@@ -43,6 +43,12 @@ class TestCli(unittest.TestCase):
         self.assertEqual(args.gif_path, 'assets/custom_cartpole.gif')
         self.assertEqual(args.env, 'CartPole')
 
+    def test_job_tracker_args(self):
+        args = parse_args(['--list-jobs', '--jobs-dir', 'custom_jobs', '--no-job'])
+        self.assertTrue(args.list_jobs)
+        self.assertEqual(args.jobs_dir, 'custom_jobs')
+        self.assertTrue(args.no_job)
+
 
 if __name__ == "__main__":
     unittest.main()

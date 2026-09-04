@@ -1,0 +1,74 @@
+Using environment: CarRacing-v3
+Hidden layer architecture: [16, 12]
+
+=== TRAINING MODE ===
+Maximum generations: 20
+Population size: 60
+Mutation rate: 0.08
+Crossover rate: 0.9
+Generation interval: 0.5
+Episodes per evaluation: 1
+Parallel workers: 8
+
+[Job Tracker] Initialized job: train-carracing-0012fc5a
+[Job Tracker] Job directory: jobs/train-carracing-0012fc5a
+Resuming training from weights: checkpoints/carracing_weights.npy
+Training CarRacing agent with PyTorch + PyMOO
+Generations: 20, Population: 60
+Network architecture: 16 -> [16, 12] -> 3
+Seeded initial population with provided weights (515 parameters)
+==============================================================================================
+n_gen  |  n_eval  |     f_avg     |     f_min     |  reward_max  |  reward_avg  | reward_best 
+==============================================================================================
+     1 |       60 | -3.407189E+02 | -9.044000E+02 |       904.40 |       340.72 |       904.40
+     2 |      120 | -6.218355E+02 | -9.044000E+02 |       904.40 |       621.84 |       904.40
+     3 |      180 | -8.430390E+02 | -9.044000E+02 |       904.40 |       843.04 |       904.40
+     4 |      240 | -8.623375E+02 | -9.044000E+02 |       904.40 |       862.34 |       904.40
+     5 |      300 | -8.743516E+02 | -9.044000E+02 |       904.40 |       874.35 |       904.40
+     6 |      360 | -8.791219E+02 | -9.044000E+02 |       904.40 |       879.12 |       904.40
+     7 |      420 | -8.821355E+02 | -9.044000E+02 |       904.40 |       882.14 |       904.40
+     8 |      480 | -8.856101E+02 | -9.044000E+02 |       904.40 |       885.61 |       904.40
+     9 |      540 | -8.871691E+02 | -9.044000E+02 |       904.40 |       887.17 |       904.40
+    10 |      600 | -8.888181E+02 | -9.044000E+02 |       904.40 |       888.82 |       904.40
+    11 |      660 | -8.914222E+02 | -9.044000E+02 |       904.40 |       891.42 |       904.40
+    12 |      720 | -8.928267E+02 | -9.044000E+02 |       904.40 |       892.83 |       904.40
+    13 |      780 | -8.940340E+02 | -9.044000E+02 |       904.40 |       894.03 |       904.40
+    14 |      840 | -8.953574E+02 | -9.044000E+02 |       904.40 |       895.36 |       904.40
+    15 |      900 | -8.959341E+02 | -9.044000E+02 |       904.40 |       895.93 |       904.40
+    16 |      960 | -8.973159E+02 | -9.044000E+02 |       904.40 |       897.32 |       904.40
+    17 |     1020 | -8.981887E+02 | -9.044000E+02 |       904.40 |       898.19 |       904.40
+    18 |     1080 | -8.986793E+02 | -9.044000E+02 |       904.40 |       898.68 |       904.40
+    19 |     1140 | -8.991782E+02 | -9.044000E+02 |       904.40 |       899.18 |       904.40
+    20 |     1200 | -8.996655E+02 | -9.044000E+02 |       904.40 |       899.67 |       904.40
+Model saved:
+- PyTorch model: jobs/train-carracing-0012fc5a/carracing_best.pth
+- Weights vector: jobs/train-carracing-0012fc5a/carracing_weights.npy
+- Learning curve: jobs/train-carracing-0012fc5a/carracing_learning_curve.png
+
+Training completed!
+Best fitness: 904.40
+Success threshold: 900
+Training completed after 20 generations. Best fitness: 904.40
+
+=== EVALUATING TRAINED AGENT ===
+Testing trained agent without rendering:
+Episode 1: reward = 706.7796610169346
+Episode 2: reward = 580.6083650189968
+Episode 3: reward = 742.7672955974674
+Episode 4: reward = 702.047781569948
+Episode 5: reward = 716.2544169611157
+Episode 6: reward = 559.1760299625375
+Episode 7: reward = 580.7017543859587
+Episode 8: reward = 565.4411764705736
+Episode 9: reward = 823.3576642335587
+Episode 10: reward = 904.1999999999886
+
+Average reward over 10 episodes: 688.13
+Standard deviation: 111.39
+
+Not quite there yet. Average reward 688.13, threshold is 900
+[Job Tracker] Promoted best artifacts to top-level: checkpoints/carracing_best.pth, checkpoints/carracing_weights.npy, checkpoints/carracing_learning_curve.png
+Loaded PyTorch model from checkpoints/carracing_best.pth
+
+=== RECORDING GIF ===
+Recorded GIF (957 frames, reward=904.40) -> assets/carracing.gif

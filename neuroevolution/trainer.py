@@ -1,6 +1,7 @@
 """Genetic algorithm trainer using PyMOO and PyTorch."""
 
 import os
+from typing import Any
 import numpy as np
 import matplotlib.pyplot as plt
 import gymnasium as gym
@@ -427,6 +428,7 @@ class PyTorchGeneticTrainer:
         n_episodes_per_eval: int = 3,
         max_steps: int | None = None,
         n_workers: int | None = None,
+        job: Any | None = None,
     ):
         self.env_name = env_name
         self.network_architecture = network_architecture
@@ -434,6 +436,7 @@ class PyTorchGeneticTrainer:
         self.checkpoint_dir = checkpoint_dir
         self.env = make_env(env_name)
         self.n_workers = n_workers
+        self.job = job
         
         # Environment-specific settings
         if 'CartPole' in env_name:
@@ -598,6 +601,18 @@ class PyTorchGeneticTrainer:
         # Generate final learning curve plot
         self.plot_learning_curve(verbose=True, show=show_plot)
         
+        # Save metrics to attached job if present
+        if self.job is not None and hasattr(self.job, 'save_metrics'):
+            self.job.save_metrics({
+                "best_fitness": float(best_fitness),
+                "success_threshold": self.success_threshold,
+                "success": bool(best_fitness >= self.success_threshold),
+                "generations_completed": len(self.fitness_history),
+                "history_best": [float(x) for x in self.history_best],
+                "history_mean": [float(x) for x in self.history_mean] if self.history_mean else [],
+                "total_episodes": int(self.history_episodes[-1]) if self.history_episodes else 0,
+            })
+
         print(f"\nTraining completed!")
         print(f"Best fitness: {best_fitness:.2f}")
         print(f"Success threshold: {self.success_threshold}")

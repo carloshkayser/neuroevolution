@@ -1,0 +1,11 @@
+{
+  "best_fitness": 904.4,
+  "success_threshold": 900,
+  "success": true,
+  "avg_eval_reward": 688.13,
+  "std_eval_reward": 111.39,
+  "generations_completed": 20,
+  "total_episodes": 1200,
+  "has_gif": true,
+  "completed_at": "2026-09-04T15:41:00.819230"
+}

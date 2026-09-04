@@ -21,6 +21,7 @@ from .trainer import (
     make_env,
 )
 from .agent import NeuralNetworkAgent, evaluate, load_model
+from .tracker import TrainingJob, create_job, list_jobs
 
 __all__ = [
     "__version__",
@@ -35,4 +36,7 @@ __all__ = [
     "evaluate",
     "load_model",
     "make_env",
+    "TrainingJob",
+    "create_job",
+    "list_jobs",
 ]
