@@ -77,8 +77,14 @@ class CartPoleNet(nn.Module):
                 # CarRacing: continuous action [steering (-1 to 1), gas (0 to 1), brake (0 to 1)]
                 if self.output_size == 3:
                     steering = torch.tanh(output[:, 0]).item()
-                    gas = torch.sigmoid(output[:, 1]).item()
-                    brake = torch.sigmoid(output[:, 2]).item()
+                    gas_raw = torch.sigmoid(output[:, 1]).item()
+                    brake_raw = torch.sigmoid(output[:, 2]).item()
+                    if gas_raw >= brake_raw:
+                        gas = gas_raw
+                        brake = 0.0
+                    else:
+                        gas = 0.0
+                        brake = brake_raw * 0.6
                     action = np.array([steering, gas, brake], dtype=np.float32)
                 elif self.output_size == 5:
                     action = torch.argmax(output, dim=1).item()

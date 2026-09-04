@@ -98,6 +98,27 @@ def parse_args(args=None):
         default=None,
         help='Number of episodes per evaluation during training (default: 1 for deterministic Maze, 3 for others)',
     )
+    parser.add_argument(
+        '--show-plot',
+        action='store_true',
+        help='Display the plot window when training finishes',
+    )
+    parser.add_argument(
+        '--no-live-plot',
+        action='store_true',
+        help='Disable real-time plot saving at each generation (only save at the end)',
+    )
+    parser.add_argument(
+        '--n-workers',
+        type=int,
+        default=None,
+        help='Number of parallel workers for evaluation (default: auto, min(CPU count, 8))',
+    )
+    parser.add_argument(
+        '--resume',
+        action='store_true',
+        help='Resume training from existing checkpoint weights if available',
+    )
     
     return parser.parse_args(args)
 
@@ -173,8 +194,11 @@ def main(args=None):
         print(f"Crossover rate: {parsed_args.crossover_prob}")
         print(f"Generation interval: {parsed_args.generation_interval}")
 
-        n_episodes_per_eval = parsed_args.episodes_per_eval if parsed_args.episodes_per_eval is not None else (1 if parsed_args.env in ('Maze', 'HardMaze') else 3)
+        is_single_episode_env = parsed_args.env in ('Maze', 'HardMaze', 'CarRacing', 'CarRacing-v0', 'CarRacing-v3')
+        n_episodes_per_eval = parsed_args.episodes_per_eval if parsed_args.episodes_per_eval is not None else (1 if is_single_episode_env else 3)
         print(f"Episodes per evaluation: {n_episodes_per_eval}")
+        if parsed_args.n_workers is not None:
+            print(f"Parallel workers: {parsed_args.n_workers}")
 
         trainer = PyTorchGeneticTrainer(
             env_name=env_name,
@@ -182,6 +206,7 @@ def main(args=None):
             model_prefix=model_prefix,
             checkpoint_dir=parsed_args.checkpoint_dir,
             n_episodes_per_eval=n_episodes_per_eval,
+            n_workers=parsed_args.n_workers,
         )
 
         best_network, best_fitness, n_generations = trainer.train(
@@ -189,6 +214,9 @@ def main(args=None):
             population_size=parsed_args.population,
             crossover_prob=parsed_args.crossover_prob,
             mutation_prob=parsed_args.mutation_prob,
+            live_plot=not parsed_args.no_live_plot,
+            show_plot=parsed_args.show_plot,
+            resume=parsed_args.resume,
         )
 
         print(f"Training completed after {n_generations} generations. Best fitness: {best_fitness:.2f}")
@@ -212,6 +240,7 @@ def main(args=None):
             network_architecture=hidden_layers,
             model_prefix=model_prefix,
             checkpoint_dir=parsed_args.checkpoint_dir,
+            n_workers=1,
         )
 
         model_path = os.path.join(parsed_args.checkpoint_dir, f'{model_prefix}_best.pth')
