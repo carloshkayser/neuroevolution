@@ -1,0 +1,17 @@
+{
+  "job_id": "train-carracing-73bc635e",
+  "env_name": "CarRacing-v3",
+  "created_at": "2026-09-05T20:40:29.322453",
+  "env_arg": "CarRacing",
+  "generations": 200,
+  "population": 60,
+  "mutation_prob": 0.08,
+  "crossover_prob": 0.3,
+  "generation_interval": 0.5,
+  "hidden_layers": [
+    8
+  ],
+  "n_workers": 8,
+  "n_episodes_per_eval": 1,
+  "model_prefix": "carracing"
+}
